@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard{% endblock %}
+
+{% block head %}
+    <!-- live.js updates the page every 5 seconds. If JavaScript is off, reload the page instead. -->
+    <noscript><meta http-equiv="refresh" content="10"></noscript>
+{% endblock %}
+
+{% block content %}
+      <!-- Preview -->
+      <section id="preview">
+        <h2>Leaderboard</h2>
+{% include "parts/status.html" %}
+      </section>
+      <!-- ./ Preview -->
+
+{% include "parts/podium.html" %}
+
+      <div class="board">
+{% with limit = 0 %}{% include "parts/standings.html" %}{% endwith %}
+{% include "parts/recent.html" %}
+      </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- Live updates -->
+    <script src="/static/js/live.js"></script>
+{% endblock %}

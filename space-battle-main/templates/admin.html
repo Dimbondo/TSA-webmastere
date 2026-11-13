@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+
+{% block head %}
+    <!-- Ask search engines not to list this page -->
+    <meta name="robots" content="noindex">
+{% endblock %}
+
+{% block content %}
+      <!-- Preview -->
+      <section id="preview">
+        <h2>Mission Control</h2>
+        <p>
+          {{ board.teams|length }} teams • {{ board.match_count }} matches •
+          ranked by <strong>{{ board.mode_label }}</strong> •
+          API is {% if board.locked %}<strong>locked</strong>{% else %}open{% endif %}
+        </p>
+        <p>Keep this address secret. Anyone with it can change the scores.</p>
+      </section>
+      <!-- ./ Preview -->
+
+      <!-- Group -->
+      <section id="group">
+        <h2>Game day controls</h2>
+        <div class="grid">
+          <!-- Article-->
+          <article>
+            <h3>Ranking</h3>
+            <form method="post" action="/ops/{{ path }}/mode">
+              <fieldset role="group">
+                <select name="mode" aria-label="Rank teams by">
+                  {% for key in modes %}
+                  <option value="{{ key }}" {% if key == board.mode %}selected{% endif %}>{{ modes[key] }}</option>
+                  {% endfor %}
+                </select>
+                <input type="submit" value="Save">
+              </fieldset>
+            </form>
+          </article>
+          <!-- ./ Article-->
+
+          <!-- Article-->
+          <article>
+            <h3>API</h3>
+            <form method="post" action="/ops/{{ path }}/lock"
+                  onsubmit="return confirm('Are you sure?')">
+              {% if board.locked %}
+              <input type="hidden" name="locked" value="no">
+              <button type="submit">Unlock (take scores again)</button>
+              {% else %}
+              <input type="hidden" name="locked" value="yes">
+              <button type="submit" class="contrast">Lock (final results)</button>
+              {% endif %}
+            </form>
+          </article>
+          <!-- ./ Article-->
+        </div>
+
+        <!-- Article-->
+        <article>
+          <h3>Announcement</h3>
+          <p>Shows at the top of the leaderboard and the big screen. Leave it empty to clear it.</p>
+          <form method="post" action="/ops/{{ path }}/announce">
+            <fieldset role="group">
+              <input name="message" maxlength="120" value="{{ board.announcement }}"
+                     placeholder="Semifinals start at 2:00 in the main arena" aria-label="Announcement">
+              <input type="submit" value="Post">
+            </fieldset>
+          </form>
+        </article>
+        <!-- ./ Article-->
+      </section>
+      <!-- ./ Group -->
+
+      <!-- Form elements-->
+      <section id="form">
+        <h2>Add a result</h2>
+        <p>
+          Use this if a match result didn't come in through the API. It works even when the API is locked.
+        </p>
+        <form method="post" action="/ops/{{ path }}/add">
+          <div class="grid">
+            <input
+              type="text"
+              name="name"
+              placeholder="Team name"
+              aria-label="Team name"
+              maxlength="40"
+              required
+            >
+            <input
+              type="number"
+              name="score"
+              placeholder="Score"
+              aria-label="Score"
+              required
+            >
+            <button type="submit">Add</button>
+          </div>
+        </form>
+
+        <h2>Fix a team name</h2>
+        <p>
+          Renames every result for a team. To merge two teams (like "Nova" and "Nova Squad"),
+          rename one to the other's name.
+        </p>
+        <form method="post" action="/ops/{{ path }}/merge">
+          <div class="grid">
+            <select name="old_name" aria-label="Team to rename" required>
+              {% for team in board.teams %}
+              <option value="{{ team.name }}">{{ team.name }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="new_name" placeholder="New name" aria-label="New name"
+                   maxlength="40" required>
+            <button type="submit" class="secondary">Rename</button>
+          </div>
+        </form>
+      </section>
+      <!-- ./ Form elements-->
+
+      <!-- Tables -->
+      <section id="tables">
+        <h2>All results ({{ results|length }})</h2>
+        <p class="grid">
+          <a href="/ops/{{ path }}/export.csv" role="button" class="outline">Download as CSV</a>
+          <button type="submit" form="undo-form" class="outline secondary" {% if trash_count == 0 %}disabled{% endif %}>
+            Undo last delete ({{ trash_count }} in trash)
+          </button>
+        </p>
+        <form id="undo-form" method="post" action="/ops/{{ path }}/undo"></form>
+        {% if results|length == 0 %}
+        <p>No results yet.</p>
+        {% else %}
+        <div class="overflow-auto">
+          <table class="striped">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Team</th>
+                <th scope="col">Score</th>
+                <th scope="col">Time (UTC)</th>
+                <th scope="col">Edit</th>
+                <th scope="col">Delete</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for result in results %}
+              <tr>
+                <th scope="row">{{ result.id }}</th>
+                <td>{{ result.name }}</td>
+                <td>{{ result.score }}</td>
+                <td>{{ result.created_at }}</td>
+                <td><a href="/ops/{{ path }}/edit/{{ result.id }}">Edit</a></td>
+                <td>
+                  <form method="post" action="/ops/{{ path }}/delete/{{ result.id }}"
+                        onsubmit="return confirm('Delete this result?')">
+                    <button type="submit" class="outline secondary">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+      </section>
+      <!-- ./ Tables -->
+
+      <!-- Buttons-->
+      <section id="buttons">
+        <h2>Start over</h2>
+        <p>Deletes every result and empties the trash. Download a CSV first if you want a copy.</p>
+        <button class="contrast" data-target="modal-reset" onclick="toggleModal(event)">
+          Reset tournament
+        </button>
+      </section>
+      <!-- ./ Buttons -->
+{% endblock %}
+
+{% block dialogs %}
+    <!-- Modal example -->
+    <dialog id="modal-reset">
+      <article>
+        <header>
+          <button
+            aria-label="Close"
+            rel="prev"
+            data-target="modal-reset"
+            onclick="toggleModal(event)"
+          ></button>
+          <h3>Confirm your action!</h3>
+        </header>
+        <p>
+          This deletes <strong>every</strong> result and can't be undone, not even with Undo. Type RESET to confirm.
+        </p>
+        <form id="reset-form" method="post" action="/ops/{{ path }}/reset">
+          <input name="confirm" placeholder="Type RESET" aria-label="Type RESET to confirm" required>
+        </form>
+        <footer>
+          <button
+            role="button"
+            class="secondary"
+            data-target="modal-reset"
+            onclick="toggleModal(event)"
+          >
+            Cancel</button
+          ><button type="submit" form="reset-form">
+            Confirm
+          </button>
+        </footer>
+      </article>
+    </dialog>
+    <!-- ./ Modal example -->
+{% endblock %}
+
+{% block scripts %}
+    <!-- Modal -->
+    <script src="/static/js/modal.js"></script>
+{% endblock %}
