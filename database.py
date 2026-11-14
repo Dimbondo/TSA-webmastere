@@ -34,12 +34,12 @@ def run(sql, values=()):
     try:
         cursor = connection.execute(sql, values)
         rows = []
-        if cursor.description is not None:  # only SELECT and RETURNING give back rows
+        if cursor.description is not None:  
             for row in cursor.fetchall():
                 rows.append(dict(row))
         connection.commit()
     finally:
-        connection.close()  # close it even if the SQL had an error
+        connection.close()  
     return rows
 
 
@@ -54,7 +54,7 @@ def run_together(commands):
             connection.execute(sql, values)
         connection.commit()
     finally:
-        connection.close()  # if anything failed, closing without commit undoes all of it
+        connection.close()  
 
 
 def add_column(table, column):
@@ -65,7 +65,7 @@ def add_column(table, column):
         try:
             run(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
         except sqlite3.OperationalError:
-            pass  # SQLite says "duplicate column" if it's already there
+            pass  
 
 
 def create_tables():
@@ -104,7 +104,7 @@ def create_tables():
     run("CREATE UNIQUE INDEX IF NOT EXISTS results_match_id ON results (match_id)")
 
 
-# ---------- Results ----------
+#  Results 
 
 def add_result(name, score, match_id=None, created_at=None):
     """Saves a result. Returns (result, is_new). If a result with the same match_id
@@ -192,7 +192,7 @@ def delete_all():
     ])
 
 
-# ---------- Settings ----------
+# Settings 
 
 def get_settings():
     """Returns all the admin settings as a dictionary, like {"mode": "best"}."""
