@@ -19,7 +19,6 @@ app.config["MAX_CONTENT_LENGTH"] = 10 * 1024  # turn away anything bigger than 1
 # Set on the server, not written in the code, because the code is public.
 # SECRET_KEY signs the little "Saved!" messages on the admin page.
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
-# The challenge asks for "security through obscurity": the admin page has no login,
 # it just lives at an address nobody is told about.
 ADMIN_PATH = os.environ.get("ADMIN_PATH")
 
@@ -51,7 +50,7 @@ def board_data():
     }
 
 
-# ---------- Public pages ----------
+# Public pages
 
 @app.route("/")
 def leaderboard():
@@ -60,7 +59,7 @@ def leaderboard():
 
 @app.route("/display")
 def display():
-    # The big-screen version for the projector.
+    
     return render_template("display.html", **board_data())
 
 
@@ -77,7 +76,7 @@ def team_page(name):
         scores.append(result["score"])
     points, zero_y = rules.chart_points(scores, 600, 200)
 
-    results.reverse()  # newest first in the table
+    results.reverse()  
     return render_template("team.html", team=team, results=results, points=points,
                            zero_y=zero_y, mode=board["mode"], mode_label=board["mode_label"])
 
@@ -97,14 +96,14 @@ def about():
     return render_template("about.html")
 
 
-# ---------- API ----------
+# API 
 
 @app.route("/api/results", methods=["POST"])
 def add_result():
     if database.get_settings().get("locked") == "yes":
         return jsonify({"ok": False, "error": "Results are locked. The tournament is over."}), 423
 
-    # force=True reads JSON even if the sender forgot the Content-Type header.
+    # force=True reads json even if the sender forgot the Content-Type header.
     # silent=True gives None instead of crashing if the JSON is broken.
     data = request.get_json(force=True, silent=True)
     error = rules.check_result(data)
@@ -130,7 +129,7 @@ def live_json():
     return jsonify(board_data())
 
 
-# ---------- Admin ----------
+# Admin 
 
 def check_admin_path(path):
     # If the secret isn't set, or the path is wrong, act like the page doesn't exist.
@@ -159,7 +158,7 @@ def admin(path):
     check_admin_path(path)
     board = board_data()
     results = database.all_results()
-    results.reverse()  # newest first
+    results.reverse()  
     return render_template("admin.html", path=path, results=results, board=board,
                            modes=rules.MODE_LABELS, trash_count=database.trash_count())
 
@@ -294,7 +293,7 @@ def admin_reset(path):
     return back_to_admin(path)
 
 
-# ---------- Errors ----------
+#  Errors 
 
 @app.errorhandler(404)
 def not_found(error):
